@@ -19,7 +19,7 @@ namespace Common
 
 const std::string& GetScmRevStr()
 {
-  static const std::string scm_rev_str = "Dolphin "
+  static const std::string scm_rev_str = "Riders Dolphin 2 "
 #if !SCM_IS_MASTER
                                          "[" SCM_BRANCH_STR "] "
 #endif
