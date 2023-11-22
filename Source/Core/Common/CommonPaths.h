@@ -19,8 +19,8 @@
 #elif defined(ANDROID)
 #define NORMAL_USER_DIR "/sdcard/dolphin-emu"
 #else
-#define NORMAL_USER_DIR "dolphin-emu"
-//#define NORMAL_USER_DIR "Riders-Dolphin2"
+//#define NORMAL_USER_DIR "dolphin-emu"
+#define NORMAL_USER_DIR "Riders-Dolphin2"
 #endif
 #else  // ifndef STEAM
 #ifdef _WIN32
