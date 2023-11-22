@@ -19,7 +19,7 @@ AboutDialog::AboutDialog(QWidget* parent) : QDialog(parent)
 
   const QString text =
       QStringLiteral(R"(
-<p style='font-size:38pt; font-weight:400;'>Dolphin</p>
+<p style='font-size:38pt; font-weight:400;'>Riders Dolphin 2</p>
 
 <p style='font-size:18pt;'>%VERSION_STRING%</p>
 
@@ -30,7 +30,7 @@ AboutDialog::AboutDialog(QWidget* parent) : QDialog(parent)
 </p>
 
 <p>
-%CHECK_FOR_UPDATES%: <a href='https://dolphin-emu.org/download'>dolphin-emu.org/download</a>
+%CHECK_FOR_UPDATES%: <a href='https://github.com/KidWizardOfTheWeb/ridersdolphin2/releases'>github.com/KidWizardOfTheWeb/ridersdolphin2</a>
 </p>
 
 <p>
@@ -61,7 +61,7 @@ AboutDialog::AboutDialog(QWidget* parent) : QDialog(parent)
                    // is "free" as in "freedom" - it refers to certain properties of the
                    // software's license, not the software's price. (It is true that Dolphin
                    // can be downloaded at no cost, but that's not what this message says.)
-                   tr("Dolphin is a free and open-source GameCube and Wii emulator."))
+                   tr("Riders Dolphin 2 is a universal Sonic Riders fork."))
           .replace(QStringLiteral("%GAMES_YOU_OWN%"),
                    tr("This software should not be used to play games you do not legally own."))
           .replace(QStringLiteral("%LICENSE%"), tr("License"))
@@ -80,7 +80,7 @@ AboutDialog::AboutDialog(QWidget* parent) : QDialog(parent)
               // your language. If you aren't sure which type is appropriate, see
               // https://en.wikipedia.org/wiki/Quotation_mark#Specific_language_features
               tr("\u00A9 2003-2015+ Dolphin Team. \u201cGameCube\u201d and \u201cWii\u201d are "
-                 "trademarks of Nintendo. Dolphin is not affiliated with Nintendo in any way.")));
+                 "trademarks of Nintendo. Dolphin and Riders Dolphin 2 is not affiliated with Nintendo in any way.")));
 
   QLabel* logo = new QLabel();
   logo->setPixmap(Resources::GetAppIcon().pixmap(200, 200));

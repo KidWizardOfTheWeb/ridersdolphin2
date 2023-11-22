@@ -3,7 +3,7 @@ var oFS				= new ActiveXObject("Scripting.FileSystemObject");
 
 var outfile			= "./scmrev.h";
 var cmd_revision	= " rev-parse HEAD";
-var cmd_describe	= " describe --always --long --dirty";
+var cmd_describe	= " describe --always --long";
 var cmd_branch		= " rev-parse --abbrev-ref HEAD";
 
 function GetGitExe()
@@ -80,7 +80,7 @@ var isStable = +("master" == branch || "stable" == branch);
 
 // Get environment information.
 var distributor = wshShell.ExpandEnvironmentStrings("%DOLPHIN_DISTRIBUTOR%");
-if (distributor == "%DOLPHIN_DISTRIBUTOR%") distributor = "None";
+if (distributor == "%DOLPHIN_DISTRIBUTOR%") distributor = "Kid Chameleon";
 var default_update_track = wshShell.ExpandEnvironmentStrings("%DOLPHIN_DEFAULT_UPDATE_TRACK%");
 if (default_update_track == "%DOLPHIN_DEFAULT_UPDATE_TRACK%") default_update_track = "";
 

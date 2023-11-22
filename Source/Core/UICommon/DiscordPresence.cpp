@@ -212,16 +212,125 @@ void UpdateDiscordPresence(int party_size, SecretType type, const std::string& s
   if (game_artwork.empty())
   {
     discord_presence.largeImageKey = "dolphin_logo";
-    discord_presence.largeImageText = "Dolphin is an emulator for the GameCube and the Wii.";
+    discord_presence.largeImageText = "Riders Dolphin 2 is a universal Sonic Riders fork.";
   }
   else
   {
-    discord_presence.largeImageKey = game_artwork.c_str();
+    //discord_presence.largeImageKey = game_artwork.c_str();
     discord_presence.largeImageText = title.c_str();
+    discord_presence.details = title.empty() ? "Not in-game" : title.c_str();
+
+    //if (SConfig::GetInstance().GetGameID() == "GXEE8P")  // Sonic Riders
+    //{
+    //  discord_presence.largeImageKey = "gxee8p";
+    //  discord_presence.largeImageText = "Playing Sonic Riders";
+    //  discord_presence.details = "Sonic Riders";
+
+    //  discord_presence.smallImageKey = "dolphin_logo";
+    //  discord_presence.smallImageText = "Riders Dolphin 2 is a universal Sonic Riders fork.";
+    //}
+    //else if (SConfig::GetInstance().GetGameID() == "SRZE8P")
+    //{
+    //  discord_presence.largeImageKey = "srze8p";
+    //  discord_presence.largeImageText = "Playing Sonic Regravitified";
+    //  discord_presence.details = "Sonic Riders: Regravitified";
+
+    //  discord_presence.smallImageKey = "dolphin_logo";
+    //  discord_presence.smallImageText = "Riders Dolphin 2 is a universal Sonic Riders fork.";
+    //}
+    //else if (SConfig::GetInstance().GetGameID() == "RS9E8P")  // Sonic Riders Zero Gravity
+    //{
+    //  discord_presence.largeImageKey = "zero_gravity";
+    //  discord_presence.largeImageText = "Playing Sonic Riders: Zero Gravity";
+    //  discord_presence.details = "Sonic Riders: Zero Gravity";
+
+    //  discord_presence.smallImageKey = "dolphin_logo";
+    //  discord_presence.smallImageText = "Riders Dolphin 2 is a universal Sonic Riders fork.";
+    //}
+    //else if (SConfig::GetInstance().GetGameID() == "GXSRDX")
+    //{
+    //  discord_presence.largeImageKey = "srdx8p";
+    //  discord_presence.largeImageText = "Playing Sonic Riders DX";
+    //  discord_presence.details = "Sonic Riders DX";
+
+    //  discord_presence.smallImageKey = "dolphin_logo";
+    //  discord_presence.smallImageText = "Riders Dolphin 2 is a universal Sonic Riders fork.";
+    //}
+    //else if (SConfig::GetInstance().GetGameID() == "GXSRTE")
+    //{
+    //  discord_presence.largeImageKey = "srte";
+    //  discord_presence.largeImageText = "Playing Sonic Riders TE";
+    //  discord_presence.details = "Sonic Riders TE";
+
+    //  discord_presence.smallImageKey = "dolphin_logo";
+    //  discord_presence.smallImageText = "Riders Dolphin 2 is a universal Sonic Riders fork.";
+    //}
+
+    //std::string ridersFinalString = "";
+    
+    std::map<std::string, int>::iterator it;
+    std::map<std::string, int> ridersGameID;  // set up a map and map each riders game to it
+    ridersGameID["GXEE8P"] = 0;
+    ridersGameID["SRZE8P"] = 1;
+    ridersGameID["RS9E8P"] = 2;
+    ridersGameID["GXSRDX"] = 3;
+    ridersGameID["GXSRTE"] = 4;
+
+    it = ridersGameID.find(SConfig::GetInstance().GetGameID());  // find that game and use that iterator for a switch-
+    if (it != ridersGameID.end())
+    {
+      //discord_presence.largeImageKey = "srte";
+      switch (static_cast<RidersGames>(ridersGameID[SConfig::GetInstance().GetGameID()]))
+      {
+      case RidersGames::GXEE8P:
+        discord_presence.largeImageKey = "gxee8p";
+        discord_presence.largeImageText = "Playing Sonic Riders";
+        discord_presence.details = "Sonic Riders";
+
+        discord_presence.smallImageKey = "dolphin_logo";
+        discord_presence.smallImageText = "Riders Dolphin 2 is a universal Sonic Riders fork.";
+        break;
+      case RidersGames::SRZE8P:
+        discord_presence.largeImageKey = "srze8p";
+        discord_presence.largeImageText = "Playing Sonic Regravitified";
+        discord_presence.details = "Sonic Riders: Regravitified";
+
+        discord_presence.smallImageKey = "dolphin_logo";
+        discord_presence.smallImageText = "Riders Dolphin 2 is a universal Sonic Riders fork.";
+        break;
+      case RidersGames::RS9E8P:
+        discord_presence.largeImageKey = "zero_gravity";
+        discord_presence.largeImageText = "Playing Sonic Riders: Zero Gravity";
+        discord_presence.details = "Sonic Riders: Zero Gravity";
+
+        discord_presence.smallImageKey = "dolphin_logo";
+        discord_presence.smallImageText = "Riders Dolphin 2 is a universal Sonic Riders fork.";
+        break;
+      case RidersGames::GXSRDX:
+        discord_presence.largeImageKey = "srdx8p";
+        discord_presence.largeImageText = "Playing Sonic Riders DX";
+        discord_presence.details = "Sonic Riders DX";
+
+        discord_presence.smallImageKey = "dolphin_logo";
+        discord_presence.smallImageText = "Riders Dolphin 2 is a universal Sonic Riders fork.";
+        break;
+      case RidersGames::GXSRTE:
+        discord_presence.largeImageKey = "srte";
+        discord_presence.largeImageText = "Playing Sonic Riders TE";
+        discord_presence.details = "Sonic Riders TE";
+
+        discord_presence.smallImageKey = "dolphin_logo";
+        discord_presence.smallImageText = "Riders Dolphin 2 is a universal Sonic Riders fork.";
+        break;
+      default:
+        break;
+      }
+    }
     discord_presence.smallImageKey = "dolphin_logo";
-    discord_presence.smallImageText = "Dolphin is an emulator for the GameCube and the Wii.";
+    discord_presence.smallImageText = "Riders Dolphin 2 is a universal Sonic Riders fork.";
+    
   }
-  discord_presence.details = title.empty() ? "Not in-game" : title.c_str();
+  //discord_presence.details = title.empty() ? "Not in-game" : title.c_str();
   discord_presence.startTimestamp = std::chrono::duration_cast<std::chrono::seconds>(
                                         std::chrono::system_clock::now().time_since_epoch())
                                         .count();

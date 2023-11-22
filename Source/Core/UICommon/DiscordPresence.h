@@ -9,7 +9,7 @@
 namespace Discord
 {
 // The number is the client ID for Dolphin, it's used for images and the application name
-const std::string DEFAULT_CLIENT_ID = "455712169795780630";
+const std::string DEFAULT_CLIENT_ID = "1175987964988362882";
 
 class Handler
 {
@@ -25,6 +25,15 @@ enum class SecretType
   Empty,
   IPAddress,
   RoomID,
+};
+
+enum class RidersGames
+{
+  GXEE8P,
+  SRZE8P,
+  RS9E8P,
+  GXSRDX,
+  GXSRTE,
 };
 
 void Init();
