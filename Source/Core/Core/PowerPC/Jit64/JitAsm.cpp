@@ -20,10 +20,6 @@
 
 using namespace Gen;
 
-// These need to be next of each other so that the assembly
-// code can compare them easily.
-static_assert(offsetof(JitBlockData, effectiveAddress) + 4 == offsetof(JitBlockData, msrBits));
-
 Jit64AsmRoutineManager::Jit64AsmRoutineManager(Jit64& jit) : CommonAsmRoutines(jit)
 {
 }
@@ -49,7 +45,7 @@ void Jit64AsmRoutineManager::Regenerate()
 
 void Jit64AsmRoutineManager::Generate()
 {
-  const bool enable_debugging = Config::Get(Config::MAIN_ENABLE_DEBUGGING);
+  const bool enable_debugging = Config::IsDebuggingEnabled();
 
   enter_code = AlignCode16();
   // We need to own the beginning of RSP, so we do an extra stack adjustment
@@ -123,19 +119,17 @@ void Jit64AsmRoutineManager::Generate()
   {
     if (m_jit.GetBlockCache()->GetEntryPoints())
     {
-      MOV(32, R(RSCRATCH2), PPCSTATE(msr));
-      AND(32, R(RSCRATCH2), Imm32(JitBaseBlockCache::JIT_CACHE_MSR_MASK));
-      SHL(64, R(RSCRATCH2), Imm8(28));
+      MOV(32, R(RSCRATCH2), PPCSTATE(feature_flags));
+      SHL(64, R(RSCRATCH2), Imm8(32));
 
       MOV(32, R(RSCRATCH_EXTRA), PPCSTATE(pc));
       OR(64, R(RSCRATCH_EXTRA), R(RSCRATCH2));
 
       u64 icache = reinterpret_cast<u64>(m_jit.GetBlockCache()->GetEntryPoints());
       MOV(64, R(RSCRATCH2), Imm64(icache));
-      // The entry points map is indexed by ((msrBits << 26) | (address >> 2)).
-      // The map contains 8 byte 64-bit pointers and that means we need to shift
-      // msr left by 29 bits and address left by 1 bit to get the correct offset
-      // in the map.
+      // The entry points map is indexed by ((feature_flags << 30) | (pc >> 2)).
+      // The map contains 8-byte pointers and that means we need to shift feature_flags
+      // left by 33 bits and pc left by 1 bit to get the correct offset in the map.
       MOV(64, R(RSCRATCH), MComplex(RSCRATCH2, RSCRATCH_EXTRA, SCALE_2, 0));
     }
     else
@@ -165,15 +159,17 @@ void Jit64AsmRoutineManager::Generate()
 
     if (!m_jit.GetBlockCache()->GetEntryPoints())
     {
-      // Check block.msrBits.
-      MOV(32, R(RSCRATCH2), PPCSTATE(msr));
-      AND(32, R(RSCRATCH2), Imm32(JitBaseBlockCache::JIT_CACHE_MSR_MASK));
-      // Also check the block.effectiveAddress
-      SHL(64, R(RSCRATCH2), Imm8(32));
-      // RSCRATCH_EXTRA still has the PC.
+      // Check block.feature_flags.
+      MOV(32, R(RSCRATCH2), PPCSTATE(feature_flags));
+      // Also check the block.effectiveAddress. RSCRATCH_EXTRA still has the PC.
+      SHL(64, R(RSCRATCH_EXTRA), Imm8(32));
       OR(64, R(RSCRATCH2), R(RSCRATCH_EXTRA));
+
+      static_assert(offsetof(JitBlockData, feature_flags) + 4 ==
+                    offsetof(JitBlockData, effectiveAddress));
+
       CMP(64, R(RSCRATCH2),
-          MDisp(RSCRATCH, static_cast<s32>(offsetof(JitBlockData, effectiveAddress))));
+          MDisp(RSCRATCH, static_cast<s32>(offsetof(JitBlockData, feature_flags))));
 
       state_mismatch = J_CC(CC_NE);
       // Success; branch to the block we found.
@@ -224,6 +220,9 @@ void Jit64AsmRoutineManager::Generate()
   MOV(32, R(ABI_PARAM2), PPCSTATE(pc));
   ABI_CallFunction(JitTrampoline);
   ABI_PopRegistersAndAdjustStack({}, 0);
+
+  // If jitting triggered an ISI exception, MSR.DR may have changed
+  MOV(64, R(RMEM), PPCSTATE(mem_ptr));
 
   JMP(dispatcher_no_check, Jump::Near);
 

@@ -17,11 +17,12 @@
 #include "Common/Config/Config.h"
 #include "Common/Thread.h"
 
+#include "Core/AchievementManager.h"
+#include "Core/Config/AchievementSettings.h"
 #include "Core/Config/FreeLookSettings.h"
 #include "Core/Config/GraphicsSettings.h"
 #include "Core/Config/MainSettings.h"
 #include "Core/Config/UISettings.h"
-#include "Core/ConfigManager.h"
 #include "Core/Core.h"
 #include "Core/FreeLookManager.h"
 #include "Core/Host.h"
@@ -257,14 +258,14 @@ void HotkeyScheduler::Run()
       if (auto bt = WiiUtils::GetBluetoothRealDevice())
         bt->UpdateSyncButtonState(IsHotkey(HK_TRIGGER_SYNC_BUTTON, true));
 
-      if (Config::Get(Config::MAIN_ENABLE_DEBUGGING))
+      if (Config::IsDebuggingEnabled())
       {
         CheckDebuggingHotkeys();
       }
 
       // TODO: HK_MBP_ADD
 
-      if (SConfig::GetInstance().bWii)
+      if (Core::System::GetInstance().IsWii())
       {
         int wiimote_id = -1;
         if (IsHotkey(HK_WIIMOTE1_CONNECT))
@@ -400,11 +401,20 @@ void HotkeyScheduler::Run()
         case AspectMode::Stretch:
           OSD::AddMessage("Stretch");
           break;
-        case AspectMode::Analog:
+        case AspectMode::ForceStandard:
           OSD::AddMessage("Force 4:3");
           break;
-        case AspectMode::AnalogWide:
+        case AspectMode::ForceWide:
           OSD::AddMessage("Force 16:9");
+          break;
+        case AspectMode::Custom:
+          OSD::AddMessage("Custom");
+          break;
+        case AspectMode::CustomStretch:
+          OSD::AddMessage("Custom (Stretch)");
+          break;
+        case AspectMode::Raw:
+          OSD::AddMessage("Raw (Square Pixels)");
           break;
         case AspectMode::Auto:
         default:
@@ -579,7 +589,15 @@ void HotkeyScheduler::Run()
     {
       const bool new_value = !Config::Get(Config::FREE_LOOK_ENABLED);
       Config::SetCurrent(Config::FREE_LOOK_ENABLED, new_value);
+#ifdef USE_RETRO_ACHIEVEMENTS
+      const bool hardcore = AchievementManager::GetInstance().IsHardcoreModeActive();
+      if (hardcore)
+        OSD::AddMessage("Free Look is Disabled in Hardcore Mode");
+      else
+        OSD::AddMessage(fmt::format("Free Look: {}", new_value ? "Enabled" : "Disabled"));
+#else   // USE_RETRO_ACHIEVEMENTS
       OSD::AddMessage(fmt::format("Free Look: {}", new_value ? "Enabled" : "Disabled"));
+#endif  // USE_RETRO_ACHIEVEMENTS
     }
 
     // Savestates

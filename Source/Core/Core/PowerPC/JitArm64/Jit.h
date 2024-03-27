@@ -180,11 +180,9 @@ public:
 
   void FloatCompare(UGeckoInstruction inst, bool upper = false);
 
-  // temp_gpr can be INVALID_REG if single is true
-  void EmitQuietNaNBitConstant(Arm64Gen::ARM64Reg dest_reg, bool single,
-                               Arm64Gen::ARM64Reg temp_gpr);
-
   bool IsFPRStoreSafe(size_t guest_reg) const;
+
+  void rlwinmx_internal(UGeckoInstruction inst, u32 sh);
 
 protected:
   struct FastmemArea
@@ -246,21 +244,23 @@ protected:
   // Registers used:
   //
   //                 addr     scratch
-  // Store:          X1       X0
-  // Load:           X0
-  // Zero 256:       X0       X30
-  // Store float:    X1       Q0
-  // Load float:     X0
+  // Store:          X2       X1
+  // Load:           X1
+  // Zero 256:       X1       X30
+  // Store float:    X2       Q0
+  // Load float:     X1
   //
   // If mode == AlwaysFastAccess, the addr argument can be any register.
   // Otherwise it must be the register listed in the table above.
   //
   // Additional scratch registers are used in the following situations:
   //
-  // emitting_routine && mode == Auto:                                            X2
+  // emitting_routine && mode == Auto:                                            X0
   // emitting_routine && mode == Auto && !(flags & BackPatchInfo::FLAG_STORE):    X3
   // emitting_routine && mode != AlwaysSlowAccess && !jo.fastmem:                 X3
-  // mode != AlwaysSlowAccess && !jo.fastmem:                                     X2
+  // mode != AlwaysSlowAccess && !jo.fastmem:                                     X0
+  // !emitting_routine && mode != AlwaysFastAccess && jo.memcheck &&
+  //         (flags & BackPatchInfo::FLAG_LOAD):                                  X0
   // !emitting_routine && mode != AlwaysSlowAccess && !jo.fastmem:                X30
   // !emitting_routine && mode == Auto && jo.fastmem:                             X30
   //
@@ -312,7 +312,18 @@ protected:
   void EndTimeProfile(JitBlock* b);
 
   void EmitUpdateMembase();
-  void EmitStoreMembase(const Arm64Gen::ARM64Reg& msr);
+  void MSRUpdated(u32 msr);
+  void MSRUpdated(Arm64Gen::ARM64Reg msr);
+
+  // Branch Watch
+  template <bool condition>
+  void WriteBranchWatch(u32 origin, u32 destination, UGeckoInstruction inst,
+                        Arm64Gen::ARM64Reg reg_a, Arm64Gen::ARM64Reg reg_b,
+                        BitSet32 gpr_caller_save, BitSet32 fpr_caller_save);
+  void WriteBranchWatchDestInRegister(u32 origin, Arm64Gen::ARM64Reg destination,
+                                      UGeckoInstruction inst, Arm64Gen::ARM64Reg reg_a,
+                                      Arm64Gen::ARM64Reg reg_b, BitSet32 gpr_caller_save,
+                                      BitSet32 fpr_caller_save);
 
   // Exits
   void

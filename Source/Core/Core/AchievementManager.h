@@ -7,6 +7,7 @@
 #include <array>
 #include <ctime>
 #include <functional>
+#include <map>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -18,10 +19,16 @@
 
 #include "Common/Event.h"
 #include "Common/WorkQueueThread.h"
+#include "DiscIO/Volume.h"
 
 namespace Core
 {
 class System;
+}
+
+namespace OSD
+{
+struct Icon;
 }
 
 class AchievementManager
@@ -30,6 +37,7 @@ public:
   enum class ResponseType
   {
     SUCCESS,
+    NOT_ENABLED,
     MANAGER_NOT_INITIALIZED,
     INVALID_REQUEST,
     INVALID_CREDENTIALS,
@@ -51,6 +59,8 @@ public:
     u32 soft_points;
   };
 
+  static constexpr size_t HASH_SIZE = 33;
+  using Hash = std::array<char, HASH_SIZE>;
   using AchievementId = u32;
   static constexpr size_t FORMAT_SIZE = 24;
   using FormattedValue = std::array<char, FORMAT_SIZE>;
@@ -58,6 +68,7 @@ public:
   static constexpr size_t RP_SIZE = 256;
   using RichPresence = std::array<char, RP_SIZE>;
   using Badge = std::vector<u8>;
+  using NamedIconMap = std::map<std::string, std::unique_ptr<OSD::Icon>, std::less<>>;
 
   struct BadgeStatus
   {
@@ -78,6 +89,7 @@ public:
     u32 points = 0;
     BadgeStatus locked_badge;
     BadgeStatus unlocked_badge;
+    u32 category = RC_ACHIEVEMENT_CATEGORY_CORE;
   };
 
   static constexpr std::string_view GRAY = "transparent";
@@ -99,13 +111,14 @@ public:
     std::unordered_map<u32, LeaderboardEntry> entries;
   };
 
-  static AchievementManager* GetInstance();
+  static AchievementManager& GetInstance();
   void Init();
   void SetUpdateCallback(UpdateCallback callback);
   ResponseType Login(const std::string& password);
   void LoginAsync(const std::string& password, const ResponseCallback& callback);
   bool IsLoggedIn() const;
-  void LoadGameByFilenameAsync(const std::string& iso_path, const ResponseCallback& callback);
+  void HashGame(const std::string& file_path, const ResponseCallback& callback);
+  void HashGame(const DiscIO::Volume* volume, const ResponseCallback& callback);
   bool IsGameLoaded() const;
 
   void LoadUnlockData(const ResponseCallback& callback);
@@ -118,7 +131,8 @@ public:
   u32 MemoryPeeker(u32 address, u32 num_bytes, void* ud);
   void AchievementEventHandler(const rc_runtime_event_t* runtime_event);
 
-  std::recursive_mutex* GetLock();
+  std::recursive_mutex& GetLock();
+  bool IsHardcoreModeActive() const;
   std::string GetPlayerDisplayName() const;
   u32 GetPlayerScore() const;
   const BadgeStatus& GetPlayerBadge() const;
@@ -130,7 +144,10 @@ public:
   AchievementManager::ResponseType GetAchievementProgress(AchievementId achievement_id, u32* value,
                                                           u32* target);
   const std::unordered_map<AchievementId, LeaderboardStatus>& GetLeaderboardsInfo() const;
-  RichPresence GetRichPresence();
+  RichPresence GetRichPresence() const;
+  bool IsDisabled() const { return m_disabled; };
+  void SetDisabled(bool disabled);
+  const NamedIconMap& GetChallengeIcons() const;
 
   void CloseGame();
   void Logout();
@@ -139,14 +156,28 @@ public:
 private:
   AchievementManager() = default;
 
-  static constexpr int HASH_LENGTH = 33;
+  struct FilereaderState
+  {
+    int64_t position = 0;
+    std::unique_ptr<DiscIO::Volume> volume;
+  };
+
+  static void* FilereaderOpenByFilepath(const char* path_utf8);
+  static void* FilereaderOpenByVolume(const char* path_utf8);
+  static void FilereaderSeek(void* file_handle, int64_t offset, int origin);
+  static int64_t FilereaderTell(void* file_handle);
+  static size_t FilereaderRead(void* file_handle, void* buffer, size_t requested_bytes);
+  static void FilereaderClose(void* file_handle);
 
   ResponseType VerifyCredentials(const std::string& password);
-  ResponseType ResolveHash(std::array<char, HASH_LENGTH> game_hash);
+  ResponseType ResolveHash(const Hash& game_hash, u32* game_id);
+  void LoadGameSync(const ResponseCallback& callback);
   ResponseType StartRASession();
   ResponseType FetchGameData();
   ResponseType FetchUnlockData(bool hardcore);
   ResponseType FetchBoardInfo(AchievementId leaderboard_id);
+
+  std::unique_ptr<DiscIO::Volume>& GetLoadingVolume() { return m_loading_volume; };
 
   void ActivateDeactivateAchievement(AchievementId id, bool enabled, bool unofficial, bool encore);
   void GenerateRichPresence();
@@ -159,6 +190,8 @@ private:
 
   void HandleAchievementTriggeredEvent(const rc_runtime_event_t* runtime_event);
   void HandleAchievementProgressUpdatedEvent(const rc_runtime_event_t* runtime_event);
+  void HandleAchievementPrimedEvent(const rc_runtime_event_t* runtime_event);
+  void HandleAchievementUnprimedEvent(const rc_runtime_event_t* runtime_event);
   void HandleLeaderboardStartedEvent(const rc_runtime_event_t* runtime_event);
   void HandleLeaderboardCanceledEvent(const rc_runtime_event_t* runtime_event);
   void HandleLeaderboardTriggeredEvent(const rc_runtime_event_t* runtime_event);
@@ -172,11 +205,13 @@ private:
   rc_runtime_t m_runtime{};
   Core::System* m_system{};
   bool m_is_runtime_initialized = false;
-  UpdateCallback m_update_callback;
+  UpdateCallback m_update_callback = [] {};
+  std::unique_ptr<DiscIO::Volume> m_loading_volume;
+  bool m_disabled = false;
   std::string m_display_name;
   u32 m_player_score = 0;
   BadgeStatus m_player_badge;
-  std::array<char, HASH_LENGTH> m_game_hash{};
+  Hash m_game_hash{};
   u32 m_game_id = 0;
   rc_api_fetch_game_data_response_t m_game_data{};
   bool m_is_game_loaded = false;
@@ -187,10 +222,12 @@ private:
 
   std::unordered_map<AchievementId, UnlockStatus> m_unlock_map;
   std::unordered_map<AchievementId, LeaderboardStatus> m_leaderboard_map;
+  NamedIconMap m_active_challenges;
 
   Common::WorkQueueThread<std::function<void()>> m_queue;
   Common::WorkQueueThread<std::function<void()>> m_image_queue;
-  std::recursive_mutex m_lock;
+  mutable std::recursive_mutex m_lock;
+  std::recursive_mutex m_filereader_lock;
 };  // class AchievementManager
 
 #endif  // USE_RETRO_ACHIEVEMENTS

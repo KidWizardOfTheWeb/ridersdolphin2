@@ -34,6 +34,7 @@ class Force;
 class IMUAccelerometer;
 class IMUGyroscope;
 class IMUCursor;
+class IRPassthrough;
 class ModifySettingsButton;
 class Output;
 class Tilt;
@@ -59,6 +60,7 @@ enum class WiimoteGroup
   IMUAccelerometer,
   IMUGyroscope,
   IMUPoint,
+  IRPassthrough,
 };
 
 enum class NunchukGroup;
@@ -121,6 +123,7 @@ public:
   static constexpr const char* ACCELEROMETER_GROUP = "IMUAccelerometer";
   static constexpr const char* GYROSCOPE_GROUP = "IMUGyroscope";
   static constexpr const char* IR_GROUP = "IR";
+  static constexpr const char* IR_PASSTHROUGH_GROUP = "IRPassthrough";
 
   static constexpr const char* A_BUTTON = "A";
   static constexpr const char* B_BUTTON = "B";
@@ -137,6 +140,9 @@ public:
   ~Wiimote();
 
   std::string GetName() const override;
+
+  InputConfig* GetConfig() const override;
+
   void LoadDefaults(const ControllerInterface& ciface) override;
 
   ControllerEmu::ControlGroup* GetWiimoteGroup(WiimoteGroup group) const;
@@ -153,7 +159,8 @@ public:
   u8 GetWiimoteDeviceIndex() const override;
   void SetWiimoteDeviceIndex(u8 index) override;
 
-  void PrepareInput(WiimoteEmu::DesiredWiimoteState* target_state) override;
+  void PrepareInput(WiimoteEmu::DesiredWiimoteState* target_state,
+                    SensorBarState sensor_bar_state) override;
   void Update(const WiimoteEmu::DesiredWiimoteState& target_state) override;
   void EventLinked() override;
   void EventUnlinked() override;
@@ -184,7 +191,7 @@ private:
 
   void StepDynamics();
   void UpdateButtonsStatus(const DesiredWiimoteState& target_state);
-  void BuildDesiredWiimoteState(DesiredWiimoteState* target_state);
+  void BuildDesiredWiimoteState(DesiredWiimoteState* target_state, SensorBarState sensor_bar_state);
 
   // Returns simulated accelerometer data in m/s^2.
   Common::Vec3 GetAcceleration(Common::Vec3 extra_acceleration) const;
@@ -296,6 +303,7 @@ private:
   ControllerEmu::IMUAccelerometer* m_imu_accelerometer;
   ControllerEmu::IMUGyroscope* m_imu_gyroscope;
   ControllerEmu::IMUCursor* m_imu_ir;
+  ControllerEmu::IRPassthrough* m_ir_passthrough;
 
   ControllerEmu::SettingValue<bool> m_sideways_setting;
   ControllerEmu::SettingValue<bool> m_upright_setting;

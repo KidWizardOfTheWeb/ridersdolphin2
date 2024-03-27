@@ -7,9 +7,11 @@
 #include "Common/Profiler.h"
 #include "Common/Timer.h"
 
+#include "Core/AchievementManager.h"
 #include "Core/Config/MainSettings.h"
 #include "Core/Config/NetplaySettings.h"
 #include "Core/Movie.h"
+#include "Core/System.h"
 
 #include "VideoCommon/AbstractGfx.h"
 #include "VideoCommon/AbstractPipeline.h"
@@ -76,7 +78,8 @@ bool OnScreenUI::Initialize(u32 width, u32 height, float scale)
     io.Fonts->GetTexDataAsRGBA32(&font_tex_pixels, &font_tex_width, &font_tex_height);
 
     TextureConfig font_tex_config(font_tex_width, font_tex_height, 1, 1, 1,
-                                  AbstractTextureFormat::RGBA8, 0);
+                                  AbstractTextureFormat::RGBA8, 0,
+                                  AbstractTextureType::Texture_2DArray);
     std::unique_ptr<AbstractTexture> font_tex =
         g_gfx->CreateTexture(font_tex_config, "ImGui font texture");
     if (!font_tex)
@@ -282,26 +285,27 @@ void OnScreenUI::DrawDebugText()
         ImGui::GetIO().DisplaySize);
     if (ImGui::Begin("Movie", nullptr, ImGuiWindowFlags_NoFocusOnAppearing))
     {
-      if (Movie::IsPlayingInput())
+      auto& movie = Core::System::GetInstance().GetMovie();
+      if (movie.IsPlayingInput())
       {
-        ImGui::Text("Frame: %" PRIu64 " / %" PRIu64, Movie::GetCurrentFrame(),
-                    Movie::GetTotalFrames());
-        ImGui::Text("Input: %" PRIu64 " / %" PRIu64, Movie::GetCurrentInputCount(),
-                    Movie::GetTotalInputCount());
+        ImGui::Text("Frame: %" PRIu64 " / %" PRIu64, movie.GetCurrentFrame(),
+                    movie.GetTotalFrames());
+        ImGui::Text("Input: %" PRIu64 " / %" PRIu64, movie.GetCurrentInputCount(),
+                    movie.GetTotalInputCount());
       }
       else if (Config::Get(Config::MAIN_SHOW_FRAME_COUNT))
       {
-        ImGui::Text("Frame: %" PRIu64, Movie::GetCurrentFrame());
-        ImGui::Text("Input: %" PRIu64, Movie::GetCurrentInputCount());
+        ImGui::Text("Frame: %" PRIu64, movie.GetCurrentFrame());
+        ImGui::Text("Input: %" PRIu64, movie.GetCurrentInputCount());
       }
       if (Config::Get(Config::MAIN_SHOW_LAG))
-        ImGui::Text("Lag: %" PRIu64 "\n", Movie::GetCurrentLagCount());
+        ImGui::Text("Lag: %" PRIu64 "\n", movie.GetCurrentLagCount());
       if (Config::Get(Config::MAIN_MOVIE_SHOW_INPUT_DISPLAY))
-        ImGui::TextUnformatted(Movie::GetInputDisplay().c_str());
+        ImGui::TextUnformatted(movie.GetInputDisplay().c_str());
       if (Config::Get(Config::MAIN_MOVIE_SHOW_RTC))
-        ImGui::TextUnformatted(Movie::GetRTCDisplay().c_str());
+        ImGui::TextUnformatted(movie.GetRTCDisplay().c_str());
       if (Config::Get(Config::MAIN_MOVIE_SHOW_RERECORD))
-        ImGui::TextUnformatted(Movie::GetRerecords().c_str());
+        ImGui::TextUnformatted(movie.GetRerecords().c_str());
     }
     ImGui::End();
   }
@@ -326,6 +330,67 @@ void OnScreenUI::DrawDebugText()
     ImGui::TextUnformatted(profile_output.c_str());
 }
 
+#ifdef USE_RETRO_ACHIEVEMENTS
+void OnScreenUI::DrawChallenges()
+{
+  std::lock_guard lg{AchievementManager::GetInstance().GetLock()};
+  const auto& challenge_icons = AchievementManager::GetInstance().GetChallengeIcons();
+  if (challenge_icons.empty())
+    return;
+
+  const std::string window_name = "Challenges";
+
+  u32 sum_of_icon_heights = 0;
+  u32 max_icon_width = 0;
+  for (const auto& [name, icon] : challenge_icons)
+  {
+    // These *should* all be the same square size but you never know.
+    if (icon->width > max_icon_width)
+      max_icon_width = icon->width;
+    sum_of_icon_heights += icon->height;
+  }
+  ImGui::SetNextWindowPos(
+      ImVec2(ImGui::GetIO().DisplaySize.x - 20.f * m_backbuffer_scale - max_icon_width,
+             ImGui::GetIO().DisplaySize.y - 20.f * m_backbuffer_scale - sum_of_icon_heights));
+  ImGui::SetNextWindowSize(ImVec2(0.0f, 0.0f));
+  if (ImGui::Begin(window_name.c_str(), nullptr,
+                   ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoInputs |
+                       ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings |
+                       ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNav |
+                       ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing))
+  {
+    for (const auto& [name, icon] : challenge_icons)
+    {
+      if (m_challenge_texture_map.find(name) != m_challenge_texture_map.end())
+        continue;
+      const u32 width = icon->width;
+      const u32 height = icon->height;
+      TextureConfig tex_config(width, height, 1, 1, 1, AbstractTextureFormat::RGBA8, 0,
+                               AbstractTextureType::Texture_2DArray);
+      auto res = m_challenge_texture_map.insert_or_assign(name, g_gfx->CreateTexture(tex_config));
+      res.first->second->Load(0, width, height, width, icon->rgba_data.data(),
+                              sizeof(u32) * width * height);
+    }
+    for (auto& [name, texture] : m_challenge_texture_map)
+    {
+      auto icon_itr = challenge_icons.find(name);
+      if (icon_itr == challenge_icons.end())
+      {
+        m_challenge_texture_map.erase(name);
+        continue;
+      }
+      if (texture)
+      {
+        ImGui::Image(texture.get(), ImVec2(static_cast<float>(icon_itr->second->width),
+                                           static_cast<float>(icon_itr->second->height)));
+      }
+    }
+  }
+
+  ImGui::End();
+}
+#endif  // USE_RETRO_ACHIEVEMENTS
+
 void OnScreenUI::Finalize()
 {
   auto lock = GetImGuiLock();
@@ -333,6 +398,9 @@ void OnScreenUI::Finalize()
   g_perf_metrics.DrawImGuiStats(m_backbuffer_scale);
   DrawDebugText();
   OSD::DrawMessages();
+#ifdef USE_RETRO_ACHIEVEMENTS
+  DrawChallenges();
+#endif  // USE_RETRO_ACHIEVEMENTS
   ImGui::Render();
 }
 

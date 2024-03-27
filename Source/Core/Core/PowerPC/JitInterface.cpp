@@ -32,11 +32,11 @@
 #include "Core/PowerPC/Profiler.h"
 #include "Core/System.h"
 
-#if _M_X86
+#ifdef _M_X86_64
 #include "Core/PowerPC/Jit64/Jit.h"
 #endif
 
-#if _M_ARM_64
+#ifdef _M_ARM_64
 #include "Core/PowerPC/JitArm64/Jit.h"
 #endif
 
@@ -61,12 +61,12 @@ CPUCoreBase* JitInterface::InitJitCore(PowerPC::CPUCore core)
 {
   switch (core)
   {
-#if _M_X86
+#ifdef _M_X86_64
   case PowerPC::CPUCore::JIT64:
     m_jit = std::make_unique<Jit64>(m_system);
     break;
 #endif
-#if _M_ARM_64
+#ifdef _M_ARM_64
   case PowerPC::CPUCore::JITARM64:
     m_jit = std::make_unique<JitArm64>(m_system);
     break;
@@ -138,7 +138,7 @@ void JitInterface::WriteProfileResults(const std::string& filename) const
                 "ms)\tblkCodeSize\n");
   for (auto& stat : prof_stats.block_stats)
   {
-    std::string name = g_symbolDB.GetDescription(stat.addr);
+    std::string name = m_system.GetPPCSymbolDB().GetDescription(stat.addr);
     double percent = 100.0 * (double)stat.cost / (double)prof_stats.cost_sum;
     double timePercent = 100.0 * (double)stat.tick_counter / (double)prof_stats.timecost_sum;
     f.WriteString(fmt::format("{0:08x}\t{1}\t{2}\t{3}\t{4}\t{5:.2f}\t{6:.2f}\t{7:.2f}\t{8}\n",
@@ -187,12 +187,14 @@ JitInterface::GetHostCode(u32 address) const
   }
 
   auto& ppc_state = m_system.GetPPCState();
-  JitBlock* block = m_jit->GetBlockCache()->GetBlockFromStartAddress(address, ppc_state.msr.Hex);
+  JitBlock* block =
+      m_jit->GetBlockCache()->GetBlockFromStartAddress(address, ppc_state.feature_flags);
   if (!block)
   {
     for (int i = 0; i < 500; i++)
     {
-      block = m_jit->GetBlockCache()->GetBlockFromStartAddress(address - 4 * i, ppc_state.msr.Hex);
+      block = m_jit->GetBlockCache()->GetBlockFromStartAddress(address - 4 * i,
+                                                               ppc_state.feature_flags);
       if (block)
         break;
     }
@@ -239,7 +241,7 @@ bool JitInterface::HandleStackFault()
   return m_jit->HandleStackFault();
 }
 
-void JitInterface::ClearCache()
+void JitInterface::ClearCache(const Core::CPUThreadGuard&)
 {
   if (m_jit)
     m_jit->ClearCache();

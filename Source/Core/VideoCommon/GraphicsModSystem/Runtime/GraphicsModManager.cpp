@@ -95,7 +95,8 @@ bool GraphicsModManager::Initialize()
     g_ActiveConfig.graphics_mod_config->SetChangeCount(old_game_mod_changes);
     g_graphics_mod_manager->Load(*g_ActiveConfig.graphics_mod_config);
 
-    m_end_of_frame_event = AfterFrameEvent::Register([this] { EndOfFrame(); }, "ModManager");
+    m_end_of_frame_event =
+        AfterFrameEvent::Register([this](Core::System&) { EndOfFrame(); }, "ModManager");
   }
 
   return true;
@@ -225,7 +226,7 @@ void GraphicsModManager::Load(const GraphicsModGroupConfig& config)
           WARN_LOG_FMT(VIDEO,
                        "Specified graphics mod asset '{}' for mod '{}' has an absolute path, you "
                        "shouldn't release this to users.",
-                       asset.m_name, mod.m_title);
+                       asset.m_asset_id, mod.m_title);
         }
         else
         {
@@ -233,7 +234,7 @@ void GraphicsModManager::Load(const GraphicsModGroupConfig& config)
         }
       }
 
-      filesystem_library->SetAssetIDMapData(asset.m_name, std::move(asset_map));
+      filesystem_library->SetAssetIDMapData(asset.m_asset_id, std::move(asset_map));
     }
   }
 

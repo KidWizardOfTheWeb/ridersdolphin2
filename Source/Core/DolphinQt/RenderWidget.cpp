@@ -22,6 +22,7 @@
 #include "Core/Config/MainSettings.h"
 #include "Core/Core.h"
 #include "Core/State.h"
+#include "Core/System.h"
 
 #include "DolphinQt/Host.h"
 #include "DolphinQt/QtUtils/ModalMessageBox.h"
@@ -129,7 +130,7 @@ void RenderWidget::dropEvent(QDropEvent* event)
     return;
   }
 
-  State::LoadAs(path.toStdString());
+  State::LoadAs(Core::System::GetInstance(), path.toStdString());
 }
 
 void RenderWidget::OnHideCursorChanged()
@@ -262,7 +263,16 @@ void RenderWidget::SetCursorLocked(bool locked, bool follow_aspect_ratio)
 
     if (ClipCursor(&rect))
 #else
-    // TODO: implement on other platforms. Probably XGrabPointer on Linux.
+    // TODO: Implement on other platforms. XGrabPointer on Linux X11 should be equivalent to
+    // ClipCursor on Windows, though XFixesCreatePointerBarrier and XFixesDestroyPointerBarrier
+    // may also work. On Wayland zwp_pointer_constraints_v1::confine_pointer and
+    // zwp_pointer_constraints_v1::destroy provide this functionality.
+    // More info:
+    // https://stackoverflow.com/a/36269507
+    // https://tronche.com/gui/x/xlib/input/XGrabPointer.html
+    // https://www.x.org/releases/X11R7.7/doc/fixesproto/fixesproto.txt
+    // https://wayland.app/protocols/pointer-constraints-unstable-v1
+
     // The setting is hidden in the UI if not implemented
     if (false)
 #endif

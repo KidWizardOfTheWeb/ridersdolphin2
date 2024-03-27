@@ -33,6 +33,7 @@
 #include "Common/FileUtil.h"
 #include "Common/StringUtil.h"
 
+#include "Core/Config/AchievementSettings.h"
 #include "Core/Config/GraphicsSettings.h"
 #include "Core/Config/MainSettings.h"
 #include "Core/ConfigManager.h"
@@ -563,6 +564,10 @@ void Settings::SetCheatsEnabled(bool enabled)
 
 void Settings::SetDebugModeEnabled(bool enabled)
 {
+#ifdef USE_RETRO_ACHIEVEMENTS
+  if (Config::Get(Config::RA_HARDCORE_ENABLED))
+    enabled = false;
+#endif  // USE_RETRO_ACHIEVEMENTS
   if (IsDebugModeEnabled() != enabled)
   {
     Config::SetBaseOrCurrent(Config::MAIN_ENABLE_DEBUGGING, enabled);
@@ -691,6 +696,20 @@ void Settings::SetJITVisible(bool enabled)
 bool Settings::IsJITVisible() const
 {
   return QSettings().value(QStringLiteral("debugger/showjit")).toBool();
+}
+
+void Settings::SetAssemblerVisible(bool enabled)
+{
+  if (IsAssemblerVisible() == enabled)
+    return;
+  QSettings().setValue(QStringLiteral("debugger/showassembler"), enabled);
+
+  emit AssemblerVisibilityChanged(enabled);
+}
+
+bool Settings::IsAssemblerVisible() const
+{
+  return QSettings().value(QStringLiteral("debugger/showassembler")).toBool();
 }
 
 void Settings::RefreshWidgetVisibility()

@@ -46,7 +46,6 @@
 #include "Common/FileUtil.h"
 
 #include "Core/Config/MainSettings.h"
-#include "Core/ConfigManager.h"
 #include "Core/Core.h"
 #include "Core/HW/DVD/DVDInterface.h"
 #include "Core/HW/EXI/EXI.h"
@@ -123,8 +122,10 @@ GameList::GameList(QWidget* parent) : QStackedWidget(parent), m_model(this)
   m_prefer_list = Settings::Instance().GetPreferredView();
   ConsiderViewChange();
 
-  const auto* zoom_in = new QShortcut(QKeySequence::ZoomIn, this);
-  const auto* zoom_out = new QShortcut(QKeySequence::ZoomOut, this);
+  auto* zoom_in = new QShortcut(QKeySequence::ZoomIn, this);
+  auto* zoom_out = new QShortcut(QKeySequence::ZoomOut, this);
+  zoom_in->setContext(Qt::WidgetWithChildrenShortcut);
+  zoom_out->setContext(Qt::WidgetWithChildrenShortcut);
 
   connect(zoom_in, &QShortcut::activated, this, &GameList::ZoomIn);
   connect(zoom_out, &QShortcut::activated, this, &GameList::ZoomOut);
@@ -435,7 +436,7 @@ void GameList::ShowContextMenu(const QPoint&)
                                                     // system menu, trigger a refresh.
                                                     Settings::Instance().NANDRefresh();
                                                   });
-      perform_disc_update->setEnabled(!Core::IsRunning() || !SConfig::GetInstance().bWii);
+      perform_disc_update->setEnabled(!Core::IsRunning() || !Core::System::GetInstance().IsWii());
     }
 
     if (!is_mod_descriptor && platform == DiscIO::Platform::WiiWAD)
@@ -552,6 +553,10 @@ void GameList::OpenProperties()
   connect(properties, &PropertiesDialog::OpenGeneralSettings, this, &GameList::OpenGeneralSettings);
   connect(properties, &PropertiesDialog::OpenGraphicsSettings, this,
           &GameList::OpenGraphicsSettings);
+#ifdef USE_RETRO_ACHIEVEMENTS
+  connect(properties, &PropertiesDialog::OpenAchievementSettings, this,
+          &GameList::OpenAchievementSettings);
+#endif  // USE_RETRO_ACHIEVEMENTS
 
   SetQWidgetWindowDecorations(properties);
   properties->show();
@@ -874,9 +879,8 @@ void GameList::ChangeDisc()
   if (!game)
     return;
 
-  Core::RunAsCPUThread([file_path = game->GetFilePath()] {
-    Core::System::GetInstance().GetDVDInterface().ChangeDisc(file_path);
-  });
+  auto& system = Core::System::GetInstance();
+  system.GetDVDInterface().ChangeDisc(Core::CPUThreadGuard{system}, game->GetFilePath());
 }
 
 QAbstractItemView* GameList::GetActiveView() const

@@ -59,7 +59,7 @@ namespace GCAdapter
 {
 #if GCADAPTER_USE_LIBUSB_IMPLEMENTATION
 
-constexpr unsigned int USB_TIMEOUT_MS = 16;
+constexpr unsigned int USB_TIMEOUT_MS = 100;
 
 static bool CheckDeviceAccess(libusb_device* device);
 static void AddGCAdapter(libusb_device* device);
@@ -436,7 +436,7 @@ void Init()
   {
     auto& system = Core::System::GetInstance();
     auto& core_timing = system.GetCoreTiming();
-    if ((core_timing.GetTicks() - s_last_init) < SystemTimers::GetTicksPerSecond())
+    if ((core_timing.GetTicks() - s_last_init) < system.GetSystemTimers().GetTicksPerSecond())
       return;
 
     s_last_init = core_timing.GetTicks();

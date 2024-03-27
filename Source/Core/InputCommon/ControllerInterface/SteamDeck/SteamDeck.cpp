@@ -113,7 +113,7 @@ public:
   Device(hid_device* device);
   std::string GetName() const final override;
   std::string GetSource() const final override;
-  void UpdateInput() override;
+  Core::DeviceRemoval UpdateInput() override;
 
 private:
   hid_device* m_device;
@@ -279,7 +279,7 @@ std::string Device::GetSource() const
   return std::string(STEAMDECK_SOURCE_NAME);
 }
 
-void Device::UpdateInput()
+Core::DeviceRemoval Device::UpdateInput()
 {
   // As of a certain mid-2023 update to the Steam client,
   // Steam will disable gyro data if gyro is not mapped in Steam Input.
@@ -288,14 +288,13 @@ void Device::UpdateInput()
   if (++m_gyro_reenable == 250)
   {
     m_gyro_reenable = 0;
-    // Using names from Valve's contribution to SDL for the Steam Controller
-    // (and assuming this has not changed for the Deck), this packet decodes as:
+    // Using names from Valve's contribution to SDL this packet decodes as:
     // 0x00 = report ID
     // 0x87 = ID_SET_SETTINGS_VALUES
     // 0x03 = payload length
-    // 0x30 = SETTING_GYRO_MODE
+    // 0x30 = SETTING_IMU_MODE
     // 0x18 0x00 = SETTING_GYRO_MODE_SEND_RAW_ACCEL | SETTING_GYRO_MODE_SEND_RAW_GYRO
-    const unsigned char pkt[] = {0x00, 0x87, 0x03, 0x30, 0x18, 0x00};
+    const unsigned char pkt[65] = {0x00, 0x87, 0x03, 0x30, 0x18, 0x00};
     hid_send_feature_report(m_device, pkt, sizeof(pkt));
   }
 
@@ -308,16 +307,18 @@ void Device::UpdateInput()
   }
   // In case there were no reports available to be read, bail early.
   if (!got_anything)
-    return;
+    return Core::DeviceRemoval::Keep;
 
   if (rpt.major_ver != 0x01 || rpt.minor_ver != 0x00 || rpt.report_type != 0x09 ||
       rpt.report_sz != sizeof(rpt))
   {
     ERROR_LOG_FMT(CONTROLLERINTERFACE, "Steam Deck bad report");
-    return;
+    return Core::DeviceRemoval::Keep;
   }
 
   m_latest_input = rpt;
+
+  return Core::DeviceRemoval::Keep;
 }
 
 }  // namespace ciface::SteamDeck

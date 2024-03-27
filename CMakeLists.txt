@@ -26,7 +26,7 @@ endif()
 # This is inserted into the Info.plist as well.
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15.0" CACHE STRING "")
 
-set(CMAKE_USER_MAKE_RULES_OVERRIDE "CMake/FlagsOverride.cmake")
+set(CMAKE_USER_MAKE_RULES_OVERRIDE "${CMAKE_CURRENT_SOURCE_DIR}/CMake/FlagsOverride.cmake")
 
 project(dolphin-emu)
 
@@ -124,8 +124,8 @@ option(OPROFILING "Enable profiling" OFF)
 # TODO: Add DSPSpy
 option(DSPTOOL "Build dsptool" OFF)
 
-# Enable SDL for default on operating systems that aren't Android or Linux.
-if(NOT ANDROID AND NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+# Enable SDL by default on operating systems that aren't Android.
+if(NOT ANDROID)
   option(ENABLE_SDL "Enables SDL as a generic controller backend" ON)
 else()
   option(ENABLE_SDL "Enables SDL as a generic controller backend" OFF)
@@ -156,7 +156,7 @@ if(UNIX)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH
-  ${CMAKE_SOURCE_DIR}/CMake
+  ${CMAKE_CURRENT_SOURCE_DIR}/CMake
 )
 
 # Support functions
@@ -219,9 +219,7 @@ if(ENABLE_GENERIC)
   set(_M_GENERIC 1)
   add_definitions(-D_M_GENERIC=1)
 elseif(_ARCH_64 AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64|AMD64")
-  set(_M_X86 1)
   set(_M_X86_64 1)
-  add_definitions(-D_M_X86=1)
   add_definitions(-D_M_X86_64=1)
   check_and_add_flag(HAVE_SSE2 -msse2)
 elseif(_ARCH_64 AND CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
@@ -589,7 +587,7 @@ if(UNIX)
 endif()
 
 if(ENABLE_SDL)
-  dolphin_find_optional_system_library(SDL2 Externals/SDL)
+  dolphin_find_optional_system_library(SDL2 Externals/SDL 2.26.0)
 endif()
 
 if(ENABLE_ANALYTICS)
@@ -625,7 +623,7 @@ endif()
 #   - place the CMakeLists.txt in the first-level subdirectory, e.g.
 #     Externals/zlib/CMakeLists.txt (that is: NOT in some Src/ subdirectory)
 #
-if (_M_X86)
+if (_M_X86_64)
   add_subdirectory(Externals/Bochs_disasm)
 endif()
 add_subdirectory(Externals/cpp-optparse)
@@ -640,6 +638,7 @@ add_subdirectory(Externals/glslang)
 if(WIN32 OR APPLE)
   add_subdirectory(Externals/spirv_cross)
 endif()
+add_subdirectory(Externals/tinygltf)
 
 if(ENABLE_VULKAN)
   add_definitions(-DHAS_VULKAN)
@@ -661,12 +660,9 @@ endif()
 
 dolphin_find_optional_system_library(pugixml Externals/pugixml)
 
-dolphin_find_optional_system_library_pkgconfig(ENET libenet>=1.3.8 enet::enet Externals/enet)
+dolphin_find_optional_system_library_pkgconfig(ENET libenet>=1.3.18 enet::enet Externals/enet)
 
-if(NOT XXHASH_FOUND)
-  message(STATUS "Using static xxhash from Externals")
-  add_subdirectory(Externals/xxhash)
-endif()
+dolphin_find_optional_system_library_pkgconfig(xxhash libxxhash>=0.8.2 xxhash::xxhash Externals/xxhash)
 
 dolphin_find_optional_system_library(BZip2 Externals/bzip2)
 
@@ -792,7 +788,7 @@ if(NOT GIT_FOUND)
 endif()
 add_custom_target(
 	dolphin_scmrev
-	${CMAKE_COMMAND} -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_BINARY_DIR=${PROJECT_BINARY_DIR} -DDISTRIBUTOR=${DISTRIBUTOR} -DDOLPHIN_DEFAULT_UPDATE_TRACK=${DOLPHIN_DEFAULT_UPDATE_TRACK} -DGIT_FOUND=${GIT_FOUND} -DGIT_EXECUTABLE=${GIT_EXECUTABLE} -DDOLPHIN_WC_REVISION=${DOLPHIN_WC_REVISION} -DDOLPHIN_WC_DESCRIBE=${DOLPHIN_WC_DESCRIBE} -DDOLPHIN_WC_BRANCH=${DOLPHIN_WC_BRANCH} -P ${CMAKE_SOURCE_DIR}/CMake/ScmRevGen.cmake
+	${CMAKE_COMMAND} -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_BINARY_DIR=${PROJECT_BINARY_DIR} -DDISTRIBUTOR=${DISTRIBUTOR} -DDOLPHIN_DEFAULT_UPDATE_TRACK=${DOLPHIN_DEFAULT_UPDATE_TRACK} -DGIT_FOUND=${GIT_FOUND} -DGIT_EXECUTABLE=${GIT_EXECUTABLE} -DDOLPHIN_WC_REVISION=${DOLPHIN_WC_REVISION} -DDOLPHIN_WC_DESCRIBE=${DOLPHIN_WC_DESCRIBE} -DDOLPHIN_WC_BRANCH=${DOLPHIN_WC_BRANCH} -P ${CMAKE_CURRENT_SOURCE_DIR}/CMake/ScmRevGen.cmake
 	BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/Source/Core/Common/scmrev.h
 	VERBATIM
 )

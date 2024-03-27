@@ -133,7 +133,8 @@ NetPlayServer::NetPlayServer(const u16 port, const bool forward_port, NetPlayUI*
   if (traversal_config.use_traversal)
   {
     if (!Common::EnsureTraversalClient(traversal_config.traversal_host,
-                                       traversal_config.traversal_port, port))
+                                       traversal_config.traversal_port,
+                                       traversal_config.traversal_port_alt, port))
     {
       return;
     }
@@ -1268,6 +1269,11 @@ void NetPlayServer::OnTraversalStateChanged()
   m_dialog->OnTraversalStateChanged(state);
 }
 
+void NetPlayServer::OnTtlDetermined(u8 ttl)
+{
+  m_dialog->OnTtlDetermined(ttl);
+}
+
 // called from ---GUI--- thread
 void NetPlayServer::SendChatMessage(const std::string& msg)
 {
@@ -1350,7 +1356,7 @@ bool NetPlayServer::SetupNetSettings()
   // Copy all relevant settings
   settings.cpu_thread = Config::Get(Config::MAIN_CPU_THREAD);
   settings.cpu_core = Config::Get(Config::MAIN_CPU_CORE);
-  settings.enable_cheats = Config::Get(Config::MAIN_ENABLE_CHEATS);
+  settings.enable_cheats = Config::AreCheatsEnabled();
   settings.selected_language = Config::Get(Config::MAIN_GC_LANGUAGE);
   settings.override_region_settings = Config::Get(Config::MAIN_OVERRIDE_REGION_SETTINGS);
   settings.dsp_hle = Config::Get(Config::MAIN_DSP_HLE);
@@ -2288,8 +2294,9 @@ std::unordered_set<std::string> NetPlayServer::GetInterfaceSet() const
 // called from ---GUI--- thread
 std::string NetPlayServer::GetInterfaceHost(const std::string& inter) const
 {
-  char buf[16];
-  sprintf(buf, ":%d", GetPort());
+  char buf[16]{};
+  fmt::format_to_n(buf, sizeof(buf) - 1, ":{}", GetPort());
+
   auto lst = GetInterfaceListInternal();
   for (const auto& list_entry : lst)
   {

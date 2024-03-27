@@ -21,10 +21,13 @@ constexpr int EFB_SCALE_AUTO_INTEGRAL = 0;
 
 enum class AspectMode : int
 {
-  Auto,
-  AnalogWide,
-  Analog,
+  Auto,           // ~4:3 or ~16:9 (auto detected)
+  ForceWide,      // ~16:9
+  ForceStandard,  // ~4:3
   Stretch,
+  Custom,         // Forced relative custom AR
+  CustomStretch,  // Forced absolute custom AR
+  Raw,            // Forced squared pixels
 };
 
 enum class StereoMode : int
@@ -105,6 +108,8 @@ struct VideoConfig final
   bool bVSyncActive = false;
   bool bWidescreenHack = false;
   AspectMode aspect_mode{};
+  int custom_aspect_width = 1;
+  int custom_aspect_height = 1;
   AspectMode suggested_aspect_mode{};
   u32 widescreen_heuristic_transition_threshold = 0;
   float widescreen_heuristic_aspect_ratio_slop = 0.f;
@@ -142,8 +147,9 @@ struct VideoConfig final
     float fSDRDisplayCustomGamma = 2.2f;
 
     // HDR:
-    // 200 is a good default value that matches the brightness of many SDR screens
-    float fHDRPaperWhiteNits = 200.f;
+    // 203 is a good default value that matches the brightness of many SDR screens.
+    // It's also the value recommended by the ITU.
+    float fHDRPaperWhiteNits = 203.f;
   } color_correction;
 
   // Information
@@ -364,6 +370,8 @@ struct VideoConfig final
   bool UsingUberShaders() const;
   u32 GetShaderCompilerThreads() const;
   u32 GetShaderPrecompilerThreads() const;
+
+  float GetCustomAspectRatio() const { return (float)custom_aspect_width / custom_aspect_height; }
 };
 
 extern VideoConfig g_Config;

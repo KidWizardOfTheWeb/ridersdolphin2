@@ -39,6 +39,10 @@ EnhancementsWidget::EnhancementsWidget(GraphicsWindow* parent) : m_block_save(fa
   AddDescriptions();
   connect(parent, &GraphicsWindow::BackendChanged,
           [this](const QString& backend) { LoadSettings(); });
+  connect(parent, &GraphicsWindow::UseFastTextureSamplingChanged, this,
+          &EnhancementsWidget::LoadSettings);
+  connect(parent, &GraphicsWindow::UseGPUTextureDecodingChanged, this,
+          &EnhancementsWidget::LoadSettings);
 }
 
 constexpr int TEXTURE_FILTERING_DEFAULT = 0;
@@ -293,7 +297,7 @@ void EnhancementsWidget::LoadPPShaders()
                                   .arg(tr(g_video_backend->GetDisplayName().c_str())));
 
   VideoCommon::PostProcessingConfiguration pp_shader;
-  if (selected_shader != "(off)" && supports_postprocessing)
+  if (selected_shader != "" && supports_postprocessing)
   {
     pp_shader.LoadShader(selected_shader);
     m_configure_pp_effect->setEnabled(pp_shader.HasOptions());
@@ -307,6 +311,9 @@ void EnhancementsWidget::LoadPPShaders()
 void EnhancementsWidget::LoadSettings()
 {
   m_block_save = true;
+  m_texture_filtering_combo->setEnabled(Config::Get(Config::GFX_HACK_FAST_TEXTURE_SAMPLING));
+  m_arbitrary_mipmap_detection->setEnabled(!Config::Get(Config::GFX_ENABLE_GPU_TEXTURE_DECODING));
+
   // Anti-Aliasing
 
   const u32 aa_selection = Config::Get(Config::GFX_MSAA);
@@ -466,11 +473,11 @@ void EnhancementsWidget::SaveSettings()
   const bool passive = g_Config.stereo_mode == StereoMode::Passive;
   Config::SetBaseOrCurrent(Config::GFX_ENHANCE_POST_SHADER,
                            (!anaglyph && !passive && m_pp_effect->currentIndex() == 0) ?
-                               "(off)" :
+                               "" :
                                m_pp_effect->currentText().toStdString());
 
   VideoCommon::PostProcessingConfiguration pp_shader;
-  if (Config::Get(Config::GFX_ENHANCE_POST_SHADER) != "(off)")
+  if (Config::Get(Config::GFX_ENHANCE_POST_SHADER) != "")
   {
     pp_shader.LoadShader(Config::Get(Config::GFX_ENHANCE_POST_SHADER));
     m_configure_pp_effect->setEnabled(pp_shader.HasOptions());
@@ -503,7 +510,8 @@ void EnhancementsWidget::AddDescriptions()
       "that are at oblique viewing angles. Force Nearest and Force Linear override the texture "
       "scaling filter selected by the game.<br><br>Any option except 'Default' will alter the look "
       "of the game's textures and might cause issues in a small number of "
-      "games.<br><br><dolphin_emphasis>If unsure, select 'Default'.</dolphin_emphasis>");
+      "games.<br><br>This option is incompatible with Manual Texture Sampling.<br><br>"
+      "<dolphin_emphasis>If unsure, select 'Default'.</dolphin_emphasis>");
   static const char TR_OUTPUT_RESAMPLING_DESCRIPTION[] =
       QT_TR_NOOP("Affects how the game output is scaled to the window resolution."
                  "<br>The performance mostly depends on the number of samples each method uses."
@@ -553,12 +561,11 @@ void EnhancementsWidget::AddDescriptions()
       "causes slowdowns or graphical issues.<br><br><dolphin_emphasis>If unsure, leave "
       "this unchecked.</dolphin_emphasis>");
   static const char TR_WIDESCREEN_HACK_DESCRIPTION[] = QT_TR_NOOP(
-      "Forces the game to output graphics for any aspect ratio. Use with \"Aspect Ratio\" set to "
-      "\"Force 16:9\" to force 4:3-only games to run at 16:9.<br><br>Rarely produces good "
-      "results and "
-      "often partially breaks graphics and game UIs. Unnecessary (and detrimental) if using any "
-      "AR/Gecko-code widescreen patches.<br><br><dolphin_emphasis>If unsure, leave "
-      "this unchecked.</dolphin_emphasis>");
+      "Forces the game to output graphics at any aspect ratio by expanding the view frustum "
+      "without stretching the image.<br>This is a hack, and its results will vary widely game "
+      "to game (it often causes the UI to stretch).<br>"
+      "Game-specific AR/Gecko-code aspect ratio patches are preferable over this if available."
+      "<br><br><dolphin_emphasis>If unsure, leave this unchecked.</dolphin_emphasis>");
   static const char TR_REMOVE_FOG_DESCRIPTION[] =
       QT_TR_NOOP("Makes distant objects more visible by removing fog, thus increasing the overall "
                  "detail.<br><br>Disabling fog will break some games which rely on proper fog "
@@ -599,7 +606,7 @@ void EnhancementsWidget::AddDescriptions()
       "resolution, such as in games that use very low resolution mipmaps. Disabling this can also "
       "reduce stutter in games that frequently load new textures. This feature is not compatible "
       "with GPU Texture Decoding.<br><br><dolphin_emphasis>If unsure, leave this "
-      "checked.</dolphin_emphasis>");
+      "unchecked.</dolphin_emphasis>");
   static const char TR_HDR_DESCRIPTION[] = QT_TR_NOOP(
       "Enables scRGB HDR output (if supported by your graphics backend and monitor)."
       " Fullscreen might be required."

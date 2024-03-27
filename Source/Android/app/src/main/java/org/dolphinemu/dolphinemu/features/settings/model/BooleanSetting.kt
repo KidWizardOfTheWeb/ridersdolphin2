@@ -15,6 +15,7 @@ enum class BooleanSetting(
     MAIN_DSP_HLE(Settings.FILE_DOLPHIN, Settings.SECTION_INI_CORE, "DSPHLE", true),
     MAIN_FASTMEM(Settings.FILE_DOLPHIN, Settings.SECTION_INI_CORE, "Fastmem", true),
     MAIN_FASTMEM_ARENA(Settings.FILE_DOLPHIN, Settings.SECTION_INI_CORE, "FastmemArena", true),
+    MAIN_LARGE_ENTRY_POINTS_MAP(Settings.FILE_DOLPHIN, Settings.SECTION_INI_CORE, "LargeEntryPointsMap", true),
     MAIN_CPU_THREAD(Settings.FILE_DOLPHIN, Settings.SECTION_INI_CORE, "CPUThread", true),
     MAIN_SYNC_ON_SKIP_IDLE(
         Settings.FILE_DOLPHIN,
@@ -762,7 +763,7 @@ enum class BooleanSetting(
         Settings.FILE_GFX,
         Settings.SECTION_GFX_ENHANCEMENTS,
         "ArbitraryMipmapDetection",
-        true
+        false
     ),
     GFX_CC_CORRECT_COLOR_SPACE(
         Settings.FILE_GFX,
@@ -899,6 +900,7 @@ enum class BooleanSetting(
         private val NOT_RUNTIME_EDITABLE_ARRAY = arrayOf(
             MAIN_DSP_HLE,
             MAIN_FASTMEM_ARENA,
+            MAIN_LARGE_ENTRY_POINTS_MAP,
             MAIN_CPU_THREAD,
             MAIN_ENABLE_CHEATS,
             MAIN_OVERRIDE_REGION_SETTINGS,

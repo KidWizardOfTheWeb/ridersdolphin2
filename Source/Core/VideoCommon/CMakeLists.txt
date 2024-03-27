@@ -20,6 +20,8 @@ add_library(videocommon
   Assets/DirectFilesystemAssetLibrary.h
   Assets/MaterialAsset.cpp
   Assets/MaterialAsset.h
+  Assets/MeshAsset.cpp
+  Assets/MeshAsset.h
   Assets/ShaderAsset.cpp
   Assets/ShaderAsset.h
   Assets/TextureAsset.cpp
@@ -85,6 +87,8 @@ add_library(videocommon
   GraphicsModSystem/Runtime/Actions/ScaleAction.h
   GraphicsModSystem/Runtime/Actions/SkipAction.cpp
   GraphicsModSystem/Runtime/Actions/SkipAction.h
+  GraphicsModSystem/Runtime/CustomPipeline.cpp
+  GraphicsModSystem/Runtime/CustomPipeline.h
   GraphicsModSystem/Runtime/CustomShaderCache.cpp
   GraphicsModSystem/Runtime/CustomShaderCache.h
   GraphicsModSystem/Runtime/FBInfo.cpp
@@ -155,6 +159,8 @@ add_library(videocommon
   TextureDecoder_Util.h
   TextureInfo.cpp
   TextureInfo.h
+  TextureUtils.cpp
+  TextureUtils.h
   TMEM.cpp
   TMEM.h
   UberShaderCommon.cpp
@@ -196,6 +202,8 @@ add_library(videocommon
   Widescreen.h
   XFMemory.cpp
   XFMemory.h
+  XFStateManager.cpp
+  XFStateManager.h
   XFStructs.cpp
   XFStructs.h
 )
@@ -210,9 +218,10 @@ PRIVATE
   imgui
   implot
   glslang
+  tinygltf
 )
 
-if(_M_X86)
+if(_M_X86_64)
   target_sources(videocommon PRIVATE
     TextureDecoder_x64.cpp
     VertexLoaderX64.cpp

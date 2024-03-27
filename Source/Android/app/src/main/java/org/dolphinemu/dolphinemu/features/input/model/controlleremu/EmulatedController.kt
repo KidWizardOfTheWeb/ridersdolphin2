@@ -30,9 +30,18 @@ class EmulatedController private constructor(private val pointer: Long) {
 
     external fun saveProfile(path: String)
 
+    external fun getProfileKey(): String
+
+    external fun getUserProfileDirectoryPath(): String
+
+    external fun getSysProfileDirectoryPath(): String
+
     companion object {
         @JvmStatic
         external fun getGcPad(controllerIndex: Int): EmulatedController
+
+        @JvmStatic
+        external fun getGcKeyboard(controllerIndex: Int): EmulatedController
 
         @JvmStatic
         external fun getWiimote(controllerIndex: Int): EmulatedController

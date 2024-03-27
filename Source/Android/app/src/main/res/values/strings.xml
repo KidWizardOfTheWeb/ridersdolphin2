@@ -47,6 +47,7 @@
     <string name="input_clear">Clear</string>
     <string name="input_clear_description">Clear settings for this controller.</string>
     <string name="input_reset_warning">Are you sure? Your current controller settings will be deleted.</string>
+    <string name="keyboard_controller_warning">"You are configuring a \"Keyboard Controller\". This device is exclusively for \"Phantasy Star Online Episode I &amp; II\". If you are unsure, turn back now and configure a \"Standard Controller\".</string>
     <string name="old_controller_settings">Your controller settings are from an old version of Dolphin and won\'t work in this version. Press \"Default\" to start over with new settings.</string>
 
     <string name="input_binding">Input Binding</string>
@@ -132,6 +133,10 @@
     <string name="xlink_kai_guide_header">For setup instructions, <a href="https://www.teamxlink.co.uk/wiki/Dolphin">refer to this page.</a></string>
     <string name="xlink_kai_bba_ip">XLink Kai IP Address/hostname</string>
     <string name="xlink_kai_bba_ip_description">IP address or hostname of device running the XLink Kai client</string>
+    <string name="bba_tapserver_destination">Tapserver destination</string>
+    <string name="bba_tapserver_destination_description">Enter the socket path or netloc (address:port) of the tapserver instance</string>
+    <string name="modem_tapserver_destination">Tapserver destination</string>
+    <string name="modem_tapserver_destination_description">Enter the socket path or netloc (address:port) of the tapserver instance</string>
     <string name="bba_builtin_dns">DNS Server</string>
     <string name="bba_builtin_dns_description">Use 8.8.8.8 for normal DNS, else enter your custom one</string>
 
@@ -221,7 +226,7 @@
     <string name="disable_copy_filter">Disable Copy Filter</string>
     <string name="disable_copy_filter_description">Disables the blending of adjacent rows when copying the EFB. This is known in some games as \"deflickering\" or \"smoothing\". Disabling the filter is usually safe, and may result in a sharper image.</string>
     <string name="arbitrary_mipmap_detection">Arbitrary Mipmap Detection</string>
-    <string name="arbitrary_mipmap_detection_description">Enables detection of arbitrary mipmaps, which some games use for special distance-based effects.\nMay have false positives that result in blurry textures at increased internal resolution, such as in games that use very low resolution mipmaps. Disabling this can also reduce stutter in games that frequently load new textures.\n\nIf unsure, leave this checked.</string>
+    <string name="arbitrary_mipmap_detection_description">Enables detection of arbitrary mipmaps, which some games use for special distance-based effects.\nMay have false positives that result in blurry textures at increased internal resolution, such as in games that use very low resolution mipmaps. Disabling this can also reduce stutter in games that frequently load new textures.\n\nIf unsure, leave this unchecked.</string>
     <string name="color_correction_submenu">Color Correction</string>
     <string name="color_space">Color Space</string>
     <string name="correct_color_space">Correct Color Space</string>
@@ -400,6 +405,7 @@
     <string name="debug_warning">Warning: Debug settings will slow emulation</string>
     <string name="debug_fastmem">Disable Fastmem</string>
     <string name="debug_fastmem_arena">Disable Fastmem Arena</string>
+    <string name="debug_large_entry_points_map">Disable Large Entry Points Map</string>
     <string name="debug_jit_header">Jit</string>
     <string name="debug_jitoff">Jit Disabled</string>
     <string name="debug_jitloadstoreoff">Jit Load Store Disabled</string>
@@ -476,7 +482,7 @@
     <string name="wii_save_import_title_missing">Failed to import save file. Please launch the game once, then try again.</string>
     <string name="nand_import_warning">Merging a new NAND over your currently selected NAND will overwrite any channels and savegames that already exist. This process is not reversible, so it is recommended that you keep backups of both NANDs. Are you sure you want to continue?</string>
     <string name="system_menu_not_installed_title">Not installed</string>
-    <string name="system_menu_not_installed_message">The Wii Menu is currently not installed. Would you like to install it now?\nAn internet connection is required to download the update. It is recommended to download the update on Wi-Fi, as the amount of data downloaded may be large.</string>
+    <string name="system_menu_not_installed_message">The Wii Menu isn\'t installed. Would you like to install it now?\n\nRoughly 110 MiB of data will be downloaded from the internet. A Wi-Fi connection is recommended.</string>
 
     <!-- Game Properties Screen -->
     <string name="properties_details">Details</string>
@@ -773,13 +779,17 @@ It can efficiently compress both junk data and encrypted Wii data.
     <string name="country_unknown">Unknown</string>
 
     <!-- GameCube Gamepad Types -->
-    <string name="gcpad_disabled">Disabled</string>
-    <string name="gcpad_emulated">Emulated</string>
+    <string name="gcpad_disabled">None</string>
+    <string name="gcpad_emulated">Standard Controller</string>
+    <string name="gcpad_keyboard">Keyboard Controller</string>
+    <string name="gcpad_steering_wheel">Steering Wheel</string>
+    <string name="gcpad_dance_mat">Dance Mat</string>
+    <string name="gcpad_taru_konga">DK Bongos</string>
     <string name="gcpad_gc_adapter">GameCube Adapter</string>
 
     <!-- Wiimote Types -->
-    <string name="wiimote_disabled">Disabled</string>
-    <string name="wiimote_emulated">Emulated</string>
+    <string name="wiimote_disabled">None</string>
+    <string name="wiimote_emulated">Emulated Wii Remote</string>
     <string name="wiimote_real">Real Wii Remote (DolphinBar required)</string>
 
     <!-- Gamepad Controls -->

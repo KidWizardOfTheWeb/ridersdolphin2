@@ -10,7 +10,6 @@
 #include "Common/MsgHandler.h"
 #include "Common/Thread.h"
 
-#include "Core/ConfigManager.h"
 #include "Core/HW/Memmap.h"
 #include "Core/System.h"
 
@@ -213,9 +212,11 @@ void FifoRecorder::FifoRecordAnalyzer::ProcessVertexComponent(
   m_owner->UseMemory(array_start, array_size, MemoryUpdate::Type::VertexStream);
 }
 
-static FifoRecorder instance;
+FifoRecorder::FifoRecorder(Core::System& system) : m_system(system)
+{
+}
 
-FifoRecorder::FifoRecorder() = default;
+FifoRecorder::~FifoRecorder() = default;
 
 void FifoRecorder::StartRecording(s32 numFrames, CallbackFunc finishedCb)
 {
@@ -235,15 +236,14 @@ void FifoRecorder::StartRecording(s32 numFrames, CallbackFunc finishedCb)
   //   - Global variables suck
   //   - Multithreading with the above two sucks
   //
-  auto& system = Core::System::GetInstance();
-  auto& memory = system.GetMemory();
+  auto& memory = m_system.GetMemory();
   m_Ram.resize(memory.GetRamSize());
   m_ExRam.resize(memory.GetExRamSize());
 
   std::fill(m_Ram.begin(), m_Ram.end(), 0);
   std::fill(m_ExRam.begin(), m_ExRam.end(), 0);
 
-  m_File->SetIsWii(SConfig::GetInstance().bWii);
+  m_File->SetIsWii(m_system.IsWii());
 
   if (!m_IsRecording)
   {
@@ -256,7 +256,7 @@ void FifoRecorder::StartRecording(s32 numFrames, CallbackFunc finishedCb)
   m_FinishedCb = finishedCb;
 
   m_end_of_frame_event = AfterFrameEvent::Register(
-      [this] {
+      [this](const Core::System& system) {
         const bool was_recording = OpcodeDecoder::g_record_fifo_data;
         OpcodeDecoder::g_record_fifo_data = IsRecording();
 
@@ -272,7 +272,7 @@ void FifoRecorder::StartRecording(s32 numFrames, CallbackFunc finishedCb)
           RecordInitialVideoMemory();
         }
 
-        const auto& fifo = Core::System::GetInstance().GetCommandProcessor().GetFifo();
+        const auto& fifo = system.GetCommandProcessor().GetFifo();
         EndFrame(fifo.CPBase.load(std::memory_order_relaxed),
                  fifo.CPEnd.load(std::memory_order_relaxed));
       },
@@ -356,8 +356,7 @@ void FifoRecorder::WriteGPCommand(const u8* data, u32 size)
 
 void FifoRecorder::UseMemory(u32 address, u32 size, MemoryUpdate::Type type, bool dynamicUpdate)
 {
-  auto& system = Core::System::GetInstance();
-  auto& memory = system.GetMemory();
+  auto& memory = m_system.GetMemory();
 
   u8* curData;
   u8* newData;
@@ -460,9 +459,4 @@ void FifoRecorder::SetVideoMemory(const u32* bpMem, const u32* cpMem, const u32*
 bool FifoRecorder::IsRecording() const
 {
   return m_IsRecording;
-}
-
-FifoRecorder& FifoRecorder::GetInstance()
-{
-  return instance;
 }

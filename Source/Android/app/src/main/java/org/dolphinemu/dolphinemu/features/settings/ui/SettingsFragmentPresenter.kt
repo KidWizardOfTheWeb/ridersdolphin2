@@ -1101,6 +1101,16 @@ class SettingsFragmentPresenter(
                     R.string.xlink_kai_bba_ip_description
                 )
             )
+        } else if (serialPort1Type == 11) {
+            // Broadband Adapter (tapserver)
+            sl.add(
+                InputStringSetting(
+                    context,
+                    StringSetting.MAIN_BBA_TAPSERVER_DESTINATION,
+                    R.string.bba_tapserver_destination,
+                    R.string.bba_tapserver_destination_description
+                )
+            )
         } else if (serialPort1Type == 12) {
             // Broadband Adapter (Built In)
             sl.add(
@@ -1109,6 +1119,16 @@ class SettingsFragmentPresenter(
                     StringSetting.MAIN_BBA_BUILTIN_DNS,
                     R.string.bba_builtin_dns,
                     R.string.bba_builtin_dns_description
+                )
+            )
+        } else if (serialPort1Type == 13) {
+            // Modem Adapter (tapserver)
+            sl.add(
+                InputStringSetting(
+                    context,
+                    StringSetting.MAIN_MODEM_TAPSERVER_DESTINATION,
+                    R.string.modem_tapserver_destination,
+                    R.string.modem_tapserver_destination_description
                 )
             )
         }
@@ -1949,6 +1969,14 @@ class SettingsFragmentPresenter(
                 0
             )
         )
+        sl.add(
+            InvertedSwitchSetting(
+                context,
+                BooleanSetting.MAIN_LARGE_ENTRY_POINTS_MAP,
+                R.string.debug_large_entry_points_map,
+                0
+            )
+        )
 
         sl.add(HeaderSetting(context, R.string.debug_jit_header, 0))
         sl.add(
@@ -2079,34 +2107,49 @@ class SettingsFragmentPresenter(
     }
 
     private fun addGcPadSubSettings(sl: ArrayList<SettingsItem>, gcPadNumber: Int, gcPadType: Int) {
-        if (gcPadType == 6) {
-            // Emulated
-            val gcPad = EmulatedController.getGcPad(gcPadNumber)
+        when (gcPadType) {
+            6, 8, 9, 10 -> {
+                // Emulated
+                val gcPad = EmulatedController.getGcPad(gcPadNumber)
 
-            if (!TextUtils.isEmpty(gameId)) {
-                addControllerPerGameSettings(sl, "Pad", gcPadNumber)
-            } else {
-                addControllerMetaSettings(sl, gcPad)
-                addControllerMappingSettings(sl, gcPad, null)
+                if (!TextUtils.isEmpty(gameId)) {
+                    addControllerPerGameSettings(sl, gcPad, gcPadNumber)
+                } else {
+                    addControllerMetaSettings(sl, gcPad)
+                    addControllerMappingSettings(sl, gcPad, null)
+                }
             }
-        } else if (gcPadType == 12) {
-            // Adapter
-            sl.add(
-                SwitchSetting(
-                    context,
-                    BooleanSetting.getSettingForAdapterRumble(gcPadNumber),
-                    R.string.gc_adapter_rumble,
-                    R.string.gc_adapter_rumble_description
+            7 -> {
+                // Emulated keyboard controller
+                val gcKeyboard = EmulatedController.getGcKeyboard(gcPadNumber)
+
+                if (!TextUtils.isEmpty(gameId)) {
+                    addControllerPerGameSettings(sl, gcKeyboard, gcPadNumber)
+                } else {
+                    sl.add(HeaderSetting(context, R.string.keyboard_controller_warning, 0))
+                    addControllerMetaSettings(sl, gcKeyboard)
+                    addControllerMappingSettings(sl, gcKeyboard, null)
+                }
+            }
+            12 -> {
+                // Adapter
+                sl.add(
+                    SwitchSetting(
+                        context,
+                        BooleanSetting.getSettingForAdapterRumble(gcPadNumber),
+                        R.string.gc_adapter_rumble,
+                        R.string.gc_adapter_rumble_description
+                    )
                 )
-            )
-            sl.add(
-                SwitchSetting(
-                    context,
-                    BooleanSetting.getSettingForSimulateKonga(gcPadNumber),
-                    R.string.gc_adapter_bongos,
-                    R.string.gc_adapter_bongos_description
+                sl.add(
+                    SwitchSetting(
+                        context,
+                        BooleanSetting.getSettingForSimulateKonga(gcPadNumber),
+                        R.string.gc_adapter_bongos,
+                        R.string.gc_adapter_bongos_description
+                    )
                 )
-            )
+            }
         }
     }
 
@@ -2114,7 +2157,7 @@ class SettingsFragmentPresenter(
         val wiimote = EmulatedController.getWiimote(wiimoteNumber)
 
         if (!TextUtils.isEmpty(gameId)) {
-            addControllerPerGameSettings(sl, "Wiimote", wiimoteNumber)
+            addControllerPerGameSettings(sl, wiimote, wiimoteNumber)
         } else {
             addControllerMetaSettings(sl, wiimote)
 
@@ -2210,11 +2253,11 @@ class SettingsFragmentPresenter(
      */
     private fun addControllerPerGameSettings(
         sl: ArrayList<SettingsItem>,
-        profileString: String,
+        controller: EmulatedController,
         controllerNumber: Int
     ) {
         val profiles = ProfileDialogPresenter(menuTag).getProfileNames(false)
-        val profileKey = profileString + "Profile" + (controllerNumber + 1)
+        val profileKey = controller.getProfileKey() + "Profile" + (controllerNumber + 1)
         sl.add(
             StringSingleChoiceSetting(
                 context,

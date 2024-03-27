@@ -345,7 +345,8 @@ void ClearUnusedPixelShaderUidBits(APIType api_type, const ShaderHostConfig& hos
 }
 
 void WritePixelShaderCommonHeader(ShaderCode& out, APIType api_type,
-                                  const ShaderHostConfig& host_config, bool bounding_box)
+                                  const ShaderHostConfig& host_config, bool bounding_box,
+                                  const CustomPixelShaderContents& custom_details)
 {
   // dot product for integer vectors
   out.Write("int idot(int3 x, int3 y)\n"
@@ -424,6 +425,14 @@ void WritePixelShaderCommonHeader(ShaderCode& out, APIType api_type,
 
     out.Write("{}", s_shader_uniforms);
     out.Write("}};\n");
+  }
+
+  if (!custom_details.shaders.empty() &&
+      !custom_details.shaders.back().material_uniform_block.empty())
+  {
+    out.Write("UBO_BINDING(std140, 3) uniform CustomShaderBlock {{\n");
+    out.Write("{}", custom_details.shaders.back().material_uniform_block);
+    out.Write("}} custom_uniforms;\n");
   }
 
   if (bounding_box)
@@ -830,7 +839,8 @@ void WriteCustomShaderStructImpl(ShaderCode* out, u32 num_stages, bool per_pixel
                texcoord);
   }
 
-  GenerateCustomLightingImplementation(out, uid_data->lighting, "colors_");
+  if (per_pixel_lighting)
+    GenerateCustomLightingImplementation(out, uid_data->lighting, "colors_");
 
   for (u32 i = 0; i < 16; i++)
   {
@@ -907,7 +917,7 @@ ShaderCode GeneratePixelShaderCode(APIType api_type, const ShaderHostConfig& hos
   // Stuff that is shared between ubershaders and pixelgen.
   WriteBitfieldExtractHeader(out, api_type, host_config);
 
-  WritePixelShaderCommonHeader(out, api_type, host_config, uid_data->bounding_box);
+  WritePixelShaderCommonHeader(out, api_type, host_config, uid_data->bounding_box, custom_details);
 
   // Custom shader details
   WriteCustomShaderStructDef(&out, uid_data->genMode_numtexgens);
@@ -990,10 +1000,15 @@ ShaderCode GeneratePixelShaderCode(APIType api_type, const ShaderHostConfig& hos
   else
 #endif
   {
-    out.Write("{} {} {} {};\n", "FRAGMENT_OUTPUT_LOCATION_INDEXED(0, 0)",
-              use_framebuffer_fetch ? "FRAGMENT_INOUT" : "out",
-              uid_data->uint_output ? "uvec4" : "vec4",
-              use_framebuffer_fetch ? "real_ocol0" : "ocol0");
+    if (use_framebuffer_fetch)
+    {
+      out.Write("FRAGMENT_OUTPUT_LOCATION(0) FRAGMENT_INOUT vec4 real_ocol0;\n");
+    }
+    else
+    {
+      out.Write("FRAGMENT_OUTPUT_LOCATION_INDEXED(0, 0) out {} ocol0;\n",
+                uid_data->uint_output ? "uvec4" : "vec4");
+    }
 
     if (!uid_data->no_dual_src)
     {
@@ -1317,8 +1332,20 @@ ShaderCode GeneratePixelShaderCode(APIType api_type, const ShaderHostConfig& hos
     if (!shader_details.custom_shader.empty())
     {
       out.Write("\t{{\n");
-      out.Write("\t\tcustom_data.final_color = ocol0;\n");
-      out.Write("\t\tocol0.xyz = {}_{}(custom_data).xyz;\n", CUSTOM_PIXELSHADER_COLOR_FUNC, i);
+      if (uid_data->uint_output)
+      {
+        out.Write("\t\tcustom_data.final_color = float4(ocol0.x / 255.0, ocol0.y / 255.0, ocol0.z "
+                  "/ 255.0, ocol0.w / 255.0);\n");
+        out.Write("\t\tfloat3 custom_output = {}_{}(custom_data).xyz;\n",
+                  CUSTOM_PIXELSHADER_COLOR_FUNC, i);
+        out.Write("\t\tocol0.xyz = uint3(custom_output.x * 255, custom_output.y * 255, "
+                  "custom_output.z * 255);\n");
+      }
+      else
+      {
+        out.Write("\t\tcustom_data.final_color = ocol0;\n");
+        out.Write("\t\tocol0.xyz = {}_{}(custom_data).xyz;\n", CUSTOM_PIXELSHADER_COLOR_FUNC, i);
+      }
       out.Write("\t}}\n\n");
     }
   }

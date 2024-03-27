@@ -11,6 +11,7 @@
 namespace VideoCommon
 {
 struct MaterialData;
+struct MeshData;
 struct PixelShaderData;
 struct TextureData;
 
@@ -28,8 +29,10 @@ public:
   struct LoadInfo
   {
     std::size_t m_bytes_loaded = 0;
-    CustomAssetLibrary::TimeType m_load_time = {};
+    TimeType m_load_time = {};
   };
+
+  virtual ~CustomAssetLibrary() = default;
 
   // Loads a texture, if there are no levels, bytes loaded will be empty
   virtual LoadInfo LoadTexture(const AssetID& asset_id, TextureData* data) = 0;
@@ -46,5 +49,8 @@ public:
 
   // Loads a material
   virtual LoadInfo LoadMaterial(const AssetID& asset_id, MaterialData* data) = 0;
+
+  // Loads a mesh
+  virtual LoadInfo LoadMesh(const AssetID& asset_id, MeshData* data) = 0;
 };
 }  // namespace VideoCommon

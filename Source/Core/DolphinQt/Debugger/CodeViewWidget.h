@@ -23,6 +23,7 @@ class System;
 
 struct CodeViewBranch;
 class BranchDisplayDelegate;
+class PPCSymbolDB;
 
 class CodeViewWidget : public QTableWidget
 {
@@ -95,11 +96,14 @@ private:
   void OnInsertBLR();
   void OnInsertNOP();
   void OnReplaceInstruction();
+  void OnAssembleInstruction();
+  void DoPatchInstruction(bool assemble);
   void OnRestoreInstruction();
 
   void CalculateBranchIndentation();
 
   Core::System& m_system;
+  PPCSymbolDB& m_ppc_symbol_db;
 
   bool m_updating = false;
 

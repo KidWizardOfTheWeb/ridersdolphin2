@@ -16,6 +16,7 @@
 #include "Common/GekkoDisassembler.h"
 #include "Common/StringUtil.h"
 
+#include "Core/Config/AchievementSettings.h"
 #include "Core/Config/MainSettings.h"
 #include "Core/Core.h"
 #include "Core/Debugger/OSThread.h"
@@ -29,6 +30,10 @@
 void ApplyMemoryPatch(const Core::CPUThreadGuard& guard, Common::Debug::MemoryPatch& patch,
                       bool store_existing_value)
 {
+#ifdef USE_RETRO_ACHIEVEMENTS
+  if (Config::Get(Config::RA_HARDCORE_ENABLED))
+    return;
+#endif  // USE_RETRO_ACHIEVEMENTS
   if (patch.value.empty())
     return;
 
@@ -85,7 +90,8 @@ void PPCPatches::UnPatch(std::size_t index)
   PatchEngine::RemoveMemoryPatch(index);
 }
 
-PPCDebugInterface::PPCDebugInterface(Core::System& system) : m_system(system)
+PPCDebugInterface::PPCDebugInterface(Core::System& system, PPCSymbolDB& ppc_symbol_db)
+    : m_system(system), m_ppc_symbol_db(ppc_symbol_db)
 {
 }
 
@@ -328,7 +334,7 @@ u32 PPCDebugInterface::ReadExtraMemory(const Core::CPUThreadGuard& guard, int me
     return PowerPC::MMU::HostRead_U32(guard, address);
   case 1:
   {
-    auto& dsp = Core::System::GetInstance().GetDSP();
+    const auto& dsp = guard.GetSystem().GetDSP();
     return (dsp.ReadARAM(address) << 24) | (dsp.ReadARAM(address + 1) << 16) |
            (dsp.ReadARAM(address + 2) << 8) | (dsp.ReadARAM(address + 3));
   }
@@ -418,7 +424,7 @@ u32 PPCDebugInterface::GetColor(const Core::CPUThreadGuard* guard, u32 address) 
   if (!PowerPC::MMU::HostIsRAMAddress(*guard, address))
     return 0xeeeeee;
 
-  Common::Symbol* symbol = g_symbolDB.GetSymbolFromAddr(address);
+  const Common::Symbol* const symbol = m_ppc_symbol_db.GetSymbolFromAddr(address);
   if (!symbol)
     return 0xFFFFFF;
   if (symbol->type != Common::Symbol::Type::Function)
@@ -438,7 +444,7 @@ u32 PPCDebugInterface::GetColor(const Core::CPUThreadGuard* guard, u32 address) 
 
 std::string PPCDebugInterface::GetDescription(u32 address) const
 {
-  return g_symbolDB.GetDescription(address);
+  return m_ppc_symbol_db.GetDescription(address);
 }
 
 std::optional<u32>
@@ -462,7 +468,7 @@ PPCDebugInterface::GetMemoryAddressFromInstruction(const std::string& instructio
 
   if (is_reg == offset_match[0])
   {
-    unsigned register_index;
+    unsigned register_index = 0;
     Common::FromChars(offset_match.substr(1), register_index, 10);
     offset = (register_index == 0 ? 0 : m_system.GetPPCState().gpr[register_index]);
   }

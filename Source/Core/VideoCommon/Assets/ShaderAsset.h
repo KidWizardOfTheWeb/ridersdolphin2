@@ -3,51 +3,60 @@
 
 #pragma once
 
+#include <array>
 #include <map>
+#include <span>
 #include <string>
+#include <string_view>
+#include <variant>
 
 #include <picojson.h>
 
-#include "Common/EnumFormatter.h"
 #include "VideoCommon/Assets/CustomAsset.h"
 
 namespace VideoCommon
 {
 struct ShaderProperty
 {
-  // "SamplerShared" denotes that the sampler
-  // already exists outside of the shader source
-  // (ex: in the Dolphin defined pixel shader)
-  // "Main" is the first entry in a shared sampler array
-  // and "Additional" denotes a subsequent entry
-  // in the array
-  enum class Type
+  struct RGB
   {
-    Type_Undefined,
-    Type_SamplerArrayShared_Main,
-    Type_SamplerArrayShared_Additional,
-    Type_Sampler2D,
-    Type_SamplerCube,
-    Type_Int,
-    Type_Int2,
-    Type_Int3,
-    Type_Int4,
-    Type_Float,
-    Type_Float2,
-    Type_Float3,
-    Type_Float4,
-    Type_RGB,
-    Type_RGBA,
-    Type_Bool,
-    Type_Max = Type_Bool
+    std::array<float, 3> value;
   };
-  Type m_type;
+
+  struct RGBA
+  {
+    std::array<float, 4> value;
+  };
+
+  struct Sampler2D
+  {
+    CustomAssetLibrary::AssetID value;
+  };
+
+  struct Sampler2DArray
+  {
+    CustomAssetLibrary::AssetID value;
+  };
+
+  struct SamplerCube
+  {
+    CustomAssetLibrary::AssetID value;
+  };
+
+  using Value = std::variant<s32, std::array<s32, 2>, std::array<s32, 3>, std::array<s32, 4>, float,
+                             std::array<float, 2>, std::array<float, 3>, std::array<float, 4>, bool,
+                             RGB, RGBA, Sampler2D, Sampler2DArray, SamplerCube>;
+  static std::span<const std::string_view> GetValueTypeNames();
+  static Value GetDefaultValueFromTypeName(std::string_view name);
+
+  Value m_default;
   std::string m_description;
 };
 struct PixelShaderData
 {
   static bool FromJson(const CustomAssetLibrary::AssetID& asset_id, const picojson::object& json,
                        PixelShaderData* data);
+  static void ToJson(picojson::object& obj, const PixelShaderData& data);
 
   // These shader properties describe the input that the
   // shader expects to expose.  The key is text
@@ -66,15 +75,3 @@ private:
   CustomAssetLibrary::LoadInfo LoadImpl(const CustomAssetLibrary::AssetID& asset_id) override;
 };
 }  // namespace VideoCommon
-
-template <>
-struct fmt::formatter<VideoCommon::ShaderProperty::Type>
-    : EnumFormatter<VideoCommon::ShaderProperty::Type::Type_Max>
-{
-  constexpr formatter()
-      : EnumFormatter({"Undefined", "DolphinSamplerArray_Main", "DolphinSamplerArray_Additional",
-                       "2DSampler", "CubeSampler", "Int", "Int2", "Int3", "Int4", "Float", "Float2",
-                       "Float3", "Float4", "RGB", "RGBA", "Bool"})
-  {
-  }
-};
